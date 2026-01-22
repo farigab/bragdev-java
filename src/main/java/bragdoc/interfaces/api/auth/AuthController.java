@@ -127,10 +127,10 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<Void> refreshToken(
-            @Valid @RequestBody RefreshTokenRequest request,
+            @CookieValue("refreshToken") String refreshToken,
             HttpServletResponse response) {
 
-        var authResponse = refreshAccessTokenUseCase.execute(request.refreshToken());
+        var authResponse = refreshAccessTokenUseCase.execute(refreshToken);
 
         // Criar cookie para novo access token
         var tokenCookie = ResponseCookie.from("token", authResponse.token())
