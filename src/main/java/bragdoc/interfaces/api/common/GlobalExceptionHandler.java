@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import bragdoc.domain.shared.exceptions.DomainException;
 import bragdoc.domain.shared.exceptions.EntityNotFoundException;
+import bragdoc.domain.shared.exceptions.TokenExpiredException;
 import bragdoc.domain.shared.exceptions.UnauthorizedException;
 
 /**
@@ -35,6 +36,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
         var error = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<TokenErrorResponse> handleTokenExpired(TokenExpiredException ex) {
+        var error = new TokenErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "TOKEN_EXPIRED",
                 ex.getMessage(),
                 LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
@@ -78,6 +89,9 @@ public class GlobalExceptionHandler {
     }
 
     record ErrorResponse(int status, String message, LocalDateTime timestamp) {
+    }
+
+    record TokenErrorResponse(int status, String code, String message, LocalDateTime timestamp) {
     }
 
     record ValidationErrorResponse(

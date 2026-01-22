@@ -5,6 +5,7 @@ import java.util.Map;
 import bragdoc.application.user.dto.AuthResponse;
 import bragdoc.application.user.dto.UserResponse;
 import bragdoc.domain.shared.exceptions.EntityNotFoundException;
+import bragdoc.domain.shared.exceptions.TokenExpiredException;
 import bragdoc.domain.shared.exceptions.UnauthorizedException;
 import bragdoc.domain.user.AuthTokenService;
 import bragdoc.domain.user.RefreshToken;
@@ -43,7 +44,7 @@ public class RefreshAccessTokenUseCase {
             if (refreshToken.isExpired()) {
                 // Limpar token expirado
                 refreshTokenRepository.delete(refreshToken);
-                throw new UnauthorizedException("Refresh token expirado");
+                throw new TokenExpiredException();
             }
             throw new UnauthorizedException("Refresh token inválido");
         }
