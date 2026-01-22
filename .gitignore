@@ -1,0 +1,47 @@
+# ======================
+# Secrets
+# ======================
+.env
+copilot-instructions.md
+
+# ======================
+# Build / Artefatos
+# ======================
+target/
+build/
+out/
+*.class
+
+# ======================
+# Maven
+# ======================
+.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# ======================
+# IDEs
+# ======================
+.idea/
+*.iml
+.vscode/
+.project
+.settings/
+
+# ======================
+# Sistema Operacional
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Logs / Temporários
+# ======================
+*.log
+tmp/
+temp/
+*.tmp
+
+# ======================
+# Outros
+# ======================
+!.gitkeep
