@@ -22,20 +22,21 @@ import bragdoc.application.report.GenerateSummaryReportUseCase;
 import bragdoc.application.user.AuthenticateUserUseCase;
 import bragdoc.application.user.ClearGitHubTokenUseCase;
 import bragdoc.application.user.GetCurrentUserUseCase;
+import bragdoc.application.user.RefreshAccessTokenUseCase;
+import bragdoc.application.user.RevokeAllRefreshTokensUseCase;
+import bragdoc.application.user.RevokeRefreshTokenUseCase;
 import bragdoc.application.user.SaveGitHubTokenUseCase;
 import bragdoc.domain.achievement.AchievementRepository;
 import bragdoc.domain.github.GitHubClient;
 import bragdoc.domain.report.AIReportGenerator;
 import bragdoc.domain.user.AuthTokenService;
 import bragdoc.domain.user.OAuthService;
+import bragdoc.domain.user.RefreshTokenRepository;
 import bragdoc.domain.user.UserRepository;
 
 /**
  * Configuração de beans da aplicação.
  * Aqui é onde fazemos a injeção de dependências e composição dos Use Cases.
- *
- * IMPORTANTE: Esta é a ÚNICA classe que conhece TODAS as camadas.
- * Ela faz a "colagem" entre domain, application e infrastructure.
  */
 @Configuration
 public class BeanConfiguration {
@@ -72,8 +73,36 @@ public class BeanConfiguration {
     public AuthenticateUserUseCase authenticateUserUseCase(
             OAuthService oauthService,
             UserRepository userRepository,
-            AuthTokenService tokenService) {
-        return new AuthenticateUserUseCase(oauthService, userRepository, tokenService);
+            AuthTokenService tokenService,
+            RefreshTokenRepository refreshTokenRepository) {
+        return new AuthenticateUserUseCase(
+                oauthService,
+                userRepository,
+                tokenService,
+                refreshTokenRepository);
+    }
+
+    @Bean
+    public RefreshAccessTokenUseCase refreshAccessTokenUseCase(
+            RefreshTokenRepository refreshTokenRepository,
+            UserRepository userRepository,
+            AuthTokenService authTokenService) {
+        return new RefreshAccessTokenUseCase(
+                refreshTokenRepository,
+                userRepository,
+                authTokenService);
+    }
+
+    @Bean
+    public RevokeRefreshTokenUseCase revokeRefreshTokenUseCase(
+            RefreshTokenRepository refreshTokenRepository) {
+        return new RevokeRefreshTokenUseCase(refreshTokenRepository);
+    }
+
+    @Bean
+    public RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase(
+            RefreshTokenRepository refreshTokenRepository) {
+        return new RevokeAllRefreshTokensUseCase(refreshTokenRepository);
     }
 
     @Bean

@@ -18,7 +18,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import bragdoc.application.user.AuthenticateUserUseCase;
 import bragdoc.application.user.ClearGitHubTokenUseCase;
+import bragdoc.application.user.RefreshAccessTokenUseCase;
+import bragdoc.application.user.RevokeAllRefreshTokensUseCase;
+import bragdoc.application.user.RevokeRefreshTokenUseCase;
 import bragdoc.application.user.SaveGitHubTokenUseCase;
+import bragdoc.application.user.dto.RefreshTokenRequest;
 import bragdoc.application.user.dto.SaveGitHubTokenRequest;
 import bragdoc.interfaces.api.common.CurrentUser;
 import bragdoc.interfaces.api.user.dto.SaveGitHubTokenApiRequest;
@@ -35,6 +39,9 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthenticateUserUseCase authenticateUserUseCase;
+    private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
+    private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
+    private final RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase;
     private final SaveGitHubTokenUseCase saveGitHubTokenUseCase;
     private final ClearGitHubTokenUseCase clearGitHubTokenUseCase;
 
@@ -49,9 +56,15 @@ public class AuthController {
 
     public AuthController(
             AuthenticateUserUseCase authenticateUserUseCase,
+            RefreshAccessTokenUseCase refreshAccessTokenUseCase,
+            RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
+            RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase,
             SaveGitHubTokenUseCase saveGitHubTokenUseCase,
             ClearGitHubTokenUseCase clearGitHubTokenUseCase) {
         this.authenticateUserUseCase = authenticateUserUseCase;
+        this.refreshAccessTokenUseCase = refreshAccessTokenUseCase;
+        this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
+        this.revokeAllRefreshTokensUseCase = revokeAllRefreshTokensUseCase;
         this.saveGitHubTokenUseCase = saveGitHubTokenUseCase;
         this.clearGitHubTokenUseCase = clearGitHubTokenUseCase;
     }
@@ -81,15 +94,26 @@ public class AuthController {
         try {
             var authResponse = authenticateUserUseCase.execute(code, redirectUri);
 
-            var cookie = ResponseCookie.from("token", authResponse.token())
+            // Criar cookie para access token
+            var tokenCookie = ResponseCookie.from("token", authResponse.token())
                     .httpOnly(true)
                     .secure(true)
                     .path("/")
-                    .maxAge(3600)
+                    .maxAge(3600) // 1 hora
                     .sameSite("None")
                     .build();
 
-            response.addHeader("Set-Cookie", cookie.toString());
+            // Criar cookie para refresh token
+            var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
+                    .httpOnly(true)
+                    .secure(true)
+                    .path("/")
+                    .maxAge(7 * 24 * 60 * 60) // 7 dias
+                    .sameSite("None")
+                    .build();
+
+            response.addHeader("Set-Cookie", tokenCookie.toString());
+            response.addHeader("Set-Cookie", refreshCookie.toString());
             response.sendRedirect(frontendRedirectUri);
 
         } catch (Exception e) {
@@ -101,9 +125,47 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<Void> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletResponse response) {
+
+        var authResponse = refreshAccessTokenUseCase.execute(request.refreshToken());
+
+        // Criar cookie para novo access token
+        var tokenCookie = ResponseCookie.from("token", authResponse.token())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(3600)
+                .sameSite("None")
+                .build();
+
+        // Criar cookie para novo refresh token
+        var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("None")
+                .build();
+
+        response.addHeader("Set-Cookie", tokenCookie.toString());
+        response.addHeader("Set-Cookie", refreshCookie.toString());
+
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from("token", "")
+    public ResponseEntity<Void> logout(
+            @CurrentUser String userLogin,
+            HttpServletResponse response) {
+
+        // Revogar todos os refresh tokens do usuário
+        revokeAllRefreshTokensUseCase.execute(userLogin);
+
+        // Limpar cookies
+        var tokenCookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
@@ -111,7 +173,26 @@ public class AuthController {
                 .sameSite("None")
                 .build();
 
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        var refreshCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("None")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/revoke-token")
+    public ResponseEntity<Void> revokeToken(
+            @Valid @RequestBody RefreshTokenRequest request,
+            @CurrentUser String userLogin) {
+
+        revokeRefreshTokenUseCase.execute(request.refreshToken(), userLogin);
         return ResponseEntity.ok().build();
     }
 
