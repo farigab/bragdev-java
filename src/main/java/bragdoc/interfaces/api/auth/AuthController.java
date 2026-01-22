@@ -90,7 +90,7 @@ public class AuthController {
                     .build();
 
             response.addHeader("Set-Cookie", cookie.toString());
-            response.sendRedirect(frontendRedirectUri + "/dashboard");
+            response.sendRedirect(frontendRedirectUri);
 
         } catch (Exception e) {
             try {

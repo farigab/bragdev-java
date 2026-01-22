@@ -28,19 +28,14 @@ public class AuthenticateUserUseCase {
     }
 
     public AuthResponse execute(String code, String redirectUri) {
-        // 1. Trocar código por access token
         String githubAccessToken = oauthService.exchangeCodeForToken(code, redirectUri);
 
-        // 2. Buscar perfil do GitHub
         var profile = oauthService.getUserProfile(githubAccessToken);
 
-        // 3. Criar ou atualizar usuário
         User user = userRepository.findByLogin(profile.login())
                 .orElseGet(() -> User.create(profile.login(), profile.name(), profile.avatarUrl()));
 
         user.updateProfile(profile.name(), profile.avatarUrl());
-        user.setGitHubToken(githubAccessToken);
-
         User savedUser = userRepository.save(user);
 
         // 4. Gerar JWT
