@@ -146,8 +146,10 @@ public class BeanConfiguration {
     @Bean
     public GenerateAIReportUseCase generateAIReportUseCase(
             AchievementRepository achievementRepository,
-            AIReportGenerator aiReportGenerator) {
-        return new GenerateAIReportUseCase(achievementRepository, aiReportGenerator);
+            AIReportGenerator aiReportGenerator,
+            UserRepository userRepository,
+            GitHubClient gitHubClient) {
+        return new GenerateAIReportUseCase(achievementRepository, aiReportGenerator, userRepository, gitHubClient);
     }
 
     @Bean

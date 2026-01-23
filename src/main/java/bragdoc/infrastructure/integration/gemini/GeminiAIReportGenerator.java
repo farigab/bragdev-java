@@ -86,4 +86,65 @@ public class GeminiAIReportGenerator implements AIReportGenerator {
             return "Erro ao gerar relatório: " + e.getMessage();
         }
     }
+
+    @Override
+    public String generateReport(String enrichedData, ReportType reportType, String userPrompt, String repository) {
+        try {
+            if (apiKey == null || apiKey.isEmpty()) {
+                log.error("Gemini API Key não configurada");
+                return "Erro: API Key não configurada.";
+            }
+
+            // Se o usuário forneceu um prompt customizado, usamos ele adicionando os dados
+            String prompt;
+            if (userPrompt != null && !userPrompt.isBlank()) {
+                StringBuilder sb = new StringBuilder();
+                if (repository != null && !repository.isBlank()) {
+                    sb.append("Repositório: ").append(repository).append("\n\n");
+                }
+                sb.append(userPrompt).append("\n\nDADOS:\n").append(enrichedData);
+                prompt = sb.toString();
+            } else {
+                String data = enrichedData;
+                if (repository != null && !repository.isBlank()) {
+                    data = "Repositório: " + repository + "\n\n" + data;
+                }
+                prompt = promptBuilder.buildPrompt(data, reportType);
+            }
+
+            String url = String.format("%s/models/%s:generateContent?key=%s",
+                    apiUrl, modelName, apiKey);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            GeminiRequest request = GeminiRequest.create(prompt);
+            HttpEntity<GeminiRequest> entity = new HttpEntity<>(request, headers);
+
+            log.info("Gerando relatório customizado do tipo: {} com modelo: {}", reportType, modelName);
+
+            var response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    GeminiResponse.class);
+
+            if (response != null && response.getBody() != null) {
+                String generatedText = response.getBody().getGeneratedText();
+
+                if (generatedText == null || generatedText.trim().length() < 100) {
+                    log.warn("Resposta muito curta ou vazia da API");
+                    return "Erro: Resposta inválida da API. Tente novamente.";
+                }
+
+                return generatedText.trim();
+            }
+
+            return "Erro: Resposta vazia da API";
+
+        } catch (Exception e) {
+            log.error("Erro ao gerar relatório customizado com Gemini: {}", e.getMessage());
+            return "Erro ao gerar relatório: " + e.getMessage();
+        }
+    }
 }
