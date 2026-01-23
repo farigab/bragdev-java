@@ -55,6 +55,16 @@ public class AuthController {
     @Value("${github.oauth.frontend-redirect-uri}")
     private String frontendRedirectUri;
 
+    @Value("${app.cookie.domain}")
+    private String cookieDomain;
+
+    @Value("${app.cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${app.cookie.same-site}")
+    private String cookieSameSite;
+
+
     public AuthController(
             AuthenticateUserUseCase authenticateUserUseCase,
             RefreshAccessTokenUseCase refreshAccessTokenUseCase,
@@ -98,21 +108,21 @@ public class AuthController {
             // Criar cookie para access token
             var tokenCookie = ResponseCookie.from("token", authResponse.token())
                     .httpOnly(true)
-                    .secure(true)
-                    .path("/")
-                    .domain(".farigab.com")
                     .maxAge(3600) // 1 hora
-                    .sameSite("None")
+                    .path("/")
+                    .sameSite(cookieSameSite)
+                    .secure(cookieSecure)
+                    .domain(cookieDomain)
                     .build();
 
             // Criar cookie para refresh token
             var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
                     .httpOnly(true)
-                    .secure(true)
                     .path("/")
-                    .domain(".farigab.com")
                     .maxAge(7 * 24 * 60 * 60) // 7 dias
-                    .sameSite("None")
+                    .sameSite(cookieSameSite)
+                    .secure(cookieSecure)
+                    .domain(cookieDomain)
                     .build();
 
             response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -138,21 +148,21 @@ public class AuthController {
         // Criar cookie para novo access token
         var tokenCookie = ResponseCookie.from("token", authResponse.token())
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
-                .domain(".farigab.com")
                 .maxAge(3600)
-                .sameSite("None")
+                .sameSite(cookieSameSite)
+                .secure(cookieSecure)
+                .domain(cookieDomain)
                 .build();
 
         // Criar cookie para novo refresh token
         var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
                 .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .domain(".farigab.com")
                 .maxAge(7 * 24 * 60 * 60)
-                .sameSite("None")
+                .path("/")
+                .sameSite(cookieSameSite)
+                .secure(cookieSecure)
+                .domain(cookieDomain)
                 .build();
 
         response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -172,20 +182,21 @@ public class AuthController {
         // Limpar cookies
         var tokenCookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
-                .domain(".farigab.com")
                 .maxAge(0)
-                .sameSite("None")
+                .sameSite(cookieSameSite)
+                .secure(cookieSecure)
+                .domain(cookieDomain)
                 .build();
 
         var refreshCookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
-                .domain(".farigab.com")
                 .maxAge(0)
-                .sameSite("None")
+                .sameSite(cookieSameSite)
+                .secure(cookieSecure)
+                .domain(cookieDomain)
+
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());

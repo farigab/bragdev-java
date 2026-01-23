@@ -49,3 +49,9 @@ github:
 
 jwt:
   secret: ${JWT_SECRET}
+
+app:
+  cookie:
+    domain: ${APP_COOKIE_DOMAIN}
+    secure: ${APP_COOKIE_SECURE}
+    same-site: ${APP_COOKIE_SAME_SITE}
