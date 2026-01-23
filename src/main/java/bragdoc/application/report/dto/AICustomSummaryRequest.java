@@ -1,6 +1,7 @@
 package bragdoc.application.report.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -14,7 +15,7 @@ public record AICustomSummaryRequest(
 
         @Size(max = 1000, message = "User prompt must not exceed 1000 characters") String userPrompt,
 
-        String repository,
+        List<String> repositories,
 
         String reportType,
 

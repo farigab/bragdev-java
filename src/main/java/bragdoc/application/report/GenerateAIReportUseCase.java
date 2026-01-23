@@ -69,14 +69,14 @@ public class GenerateAIReportUseCase {
      * que serão considerados na geração do prompt para a IA.
      */
     public AIReportResponse executeCustom(GenerateReportRequest request, String userLogin, String userPrompt,
-            String repository) {
+            java.util.List<String> repositories) {
         ReportType reportType = ReportType.from(request.reportType());
 
         ReportFilter filter = buildFilter(request);
 
         List<Achievement> achievements;
-        // Se foi informado um repositório, buscar diretamente do GitHub
-        if (repository != null && !repository.isBlank()) {
+        // Se foi informada(s) lista(s) de repositório(s), buscar diretamente do GitHub
+        if (repositories != null && repositories.stream().anyMatch(r -> r != null && !r.isBlank())) {
             var user = userRepository.findByLogin(userLogin)
                     .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
@@ -85,9 +85,6 @@ public class GenerateAIReportUseCase {
                 achievements = fetchAchievements(filter, userLogin);
             } else {
                 String accessToken = user.getGithubTokenValue();
-
-                GitHubRepository ghRepo = GitHubRepository.from(repository);
-
                 ImportPeriod period = ImportPeriod.all();
                 if (filter.hasDateRange()) {
                     period = ImportPeriod.between(
@@ -95,12 +92,19 @@ public class GenerateAIReportUseCase {
                             filter.endDate().atTime(23, 59, 59));
                 }
 
-                List<GitHubContribution> prs = gitHubClient.fetchPullRequests(ghRepo, accessToken, period);
-                List<GitHubContribution> commits = gitHubClient.fetchCommits(ghRepo, accessToken, period);
-
                 List<Achievement> converted = new ArrayList<>();
-                prs.forEach(p -> converted.add(p.toAchievement(userLogin)));
-                commits.forEach(c -> converted.add(c.toAchievement(userLogin)));
+                for (String repo : repositories) {
+                    if (repo == null || repo.isBlank()) {
+                        continue;
+                    }
+                    GitHubRepository ghRepo = GitHubRepository.from(repo);
+
+                    List<GitHubContribution> prs = gitHubClient.fetchPullRequests(ghRepo, accessToken, period);
+                    List<GitHubContribution> commits = gitHubClient.fetchCommits(ghRepo, accessToken, period);
+
+                    prs.forEach(p -> converted.add(p.toAchievement(userLogin)));
+                    commits.forEach(c -> converted.add(c.toAchievement(userLogin)));
+                }
 
                 achievements = converted;
             }
@@ -112,7 +116,7 @@ public class GenerateAIReportUseCase {
 
         String enrichedData = report.prepareEnrichedData();
 
-        String aiReport = aiReportGenerator.generateReport(enrichedData, reportType, userPrompt, repository);
+        String aiReport = aiReportGenerator.generateReport(enrichedData, reportType, userPrompt, repositories);
 
         AIReportResponse.FiltersApplied filtersApplied = new AIReportResponse.FiltersApplied(
                 filter.category() != null ? filter.category() : "all",

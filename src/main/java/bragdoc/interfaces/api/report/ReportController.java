@@ -102,7 +102,7 @@ public class ReportController {
                 request,
                 userLogin,
                 requestDto.userPrompt(),
-                requestDto.repository());
+                requestDto.repositories());
 
         return ResponseEntity.ok(response);
     }

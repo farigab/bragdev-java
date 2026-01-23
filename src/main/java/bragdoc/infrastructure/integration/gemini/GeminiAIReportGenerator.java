@@ -1,5 +1,7 @@
 package bragdoc.infrastructure.integration.gemini;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -88,7 +90,8 @@ public class GeminiAIReportGenerator implements AIReportGenerator {
     }
 
     @Override
-    public String generateReport(String enrichedData, ReportType reportType, String userPrompt, String repository) {
+    public String generateReport(String enrichedData, ReportType reportType, String userPrompt,
+            List<String> repositories) {
         try {
             if (apiKey == null || apiKey.isEmpty()) {
                 log.error("Gemini API Key não configurada");
@@ -99,15 +102,29 @@ public class GeminiAIReportGenerator implements AIReportGenerator {
             String prompt;
             if (userPrompt != null && !userPrompt.isBlank()) {
                 StringBuilder sb = new StringBuilder();
-                if (repository != null && !repository.isBlank()) {
-                    sb.append("Repositório: ").append(repository).append("\n\n");
+                if (repositories != null && !repositories.isEmpty()) {
+                    sb.append("Repositórios:\n");
+                    for (String repo : repositories) {
+                        if (repo != null && !repo.isBlank()) {
+                            sb.append("- ").append(repo).append("\n");
+                        }
+                    }
+                    sb.append("\n");
                 }
                 sb.append(userPrompt).append("\n\nDADOS:\n").append(enrichedData);
                 prompt = sb.toString();
             } else {
                 String data = enrichedData;
-                if (repository != null && !repository.isBlank()) {
-                    data = "Repositório: " + repository + "\n\n" + data;
+                if (repositories != null && !repositories.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Repositórios:\n");
+                    for (String repo : repositories) {
+                        if (repo != null && !repo.isBlank()) {
+                            sb.append("- ").append(repo).append("\n");
+                        }
+                    }
+                    sb.append("\n").append(data);
+                    data = sb.toString();
                 }
                 prompt = promptBuilder.buildPrompt(data, reportType);
             }
