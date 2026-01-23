@@ -101,7 +101,7 @@ public class AuthController {
                     .secure(true)
                     .path("/")
                     .maxAge(3600) // 1 hora
-                    .sameSite("None")
+                    .sameSite("Strict")
                     .build();
 
             // Criar cookie para refresh token
@@ -110,7 +110,7 @@ public class AuthController {
                     .secure(true)
                     .path("/")
                     .maxAge(7 * 24 * 60 * 60) // 7 dias
-                    .sameSite("None")
+                    .sameSite("Strict")
                     .build();
 
             response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -139,7 +139,7 @@ public class AuthController {
                 .secure(true)
                 .path("/")
                 .maxAge(3600)
-                .sameSite("None")
+                .sameSite("Strict")
                 .build();
 
         // Criar cookie para novo refresh token
@@ -148,7 +148,7 @@ public class AuthController {
                 .secure(true)
                 .path("/")
                 .maxAge(7 * 24 * 60 * 60)
-                .sameSite("None")
+                .sameSite("Strict")
                 .build();
 
         response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -171,7 +171,7 @@ public class AuthController {
                 .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("None")
+                .sameSite("Strict")
                 .build();
 
         var refreshCookie = ResponseCookie.from("refreshToken", "")
@@ -179,7 +179,7 @@ public class AuthController {
                 .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("None")
+                .sameSite("Strict")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
