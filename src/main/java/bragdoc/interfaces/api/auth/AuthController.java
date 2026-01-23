@@ -100,8 +100,9 @@ public class AuthController {
                     .httpOnly(true)
                     .secure(true)
                     .path("/")
+                    .domain(".farigab.com")
                     .maxAge(3600) // 1 hora
-                    .sameSite("Strict")
+                    .sameSite("None")
                     .build();
 
             // Criar cookie para refresh token
@@ -109,8 +110,9 @@ public class AuthController {
                     .httpOnly(true)
                     .secure(true)
                     .path("/")
+                    .domain(".farigab.com")
                     .maxAge(7 * 24 * 60 * 60) // 7 dias
-                    .sameSite("Strict")
+                    .sameSite("None")
                     .build();
 
             response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -138,8 +140,9 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .domain(".farigab.com")
                 .maxAge(3600)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
 
         // Criar cookie para novo refresh token
@@ -147,8 +150,9 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .domain(".farigab.com")
                 .maxAge(7 * 24 * 60 * 60)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
 
         response.addHeader("Set-Cookie", tokenCookie.toString());
@@ -170,16 +174,18 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .domain(".farigab.com")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
 
         var refreshCookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .domain(".farigab.com")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
