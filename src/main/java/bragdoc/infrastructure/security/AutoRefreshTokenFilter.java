@@ -59,8 +59,11 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        // Pular endpoints públicos
-        if (isPublicEndpoint(request.getRequestURI())) {
+        String uri = request.getRequestURI();
+        log.trace("AutoRefreshTokenFilter - URI: {}", uri);
+
+        if (isPublicEndpoint(uri)) {
+            log.trace("Endpoint público. Pulando filtro");
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,20 +71,27 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
         String accessToken = extractCookie(request, "token");
         String refreshToken = extractCookie(request, "refreshToken");
 
-        // Se access token está válido, prosseguir normalmente
         if (accessToken != null && jwtTokenService.isValid(accessToken)) {
+            log.debug("Access token válido");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Access token ausente/inválido/expirado - tentar renovar
-        if (refreshToken != null && !refreshToken.isBlank()) {
-            if (tryAutoRefresh(refreshToken, response)) {
-                log.debug("Token renovado automaticamente");
-            } else {
-                log.debug("Falha ao renovar token automaticamente");
-                clearAuthCookies(response);
-            }
+        log.debug("Access token ausente ou inválido");
+
+        if (refreshToken == null || refreshToken.isBlank()) {
+            log.debug("Refresh token ausente");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        log.debug("Tentando renovar token via refresh");
+
+        if (tryAutoRefresh(refreshToken, request, response)) { // ← Adicione 'request' aqui
+            log.info("Token renovado automaticamente");
+        } else {
+            log.warn("Falha ao renovar token. Limpando cookies");
+            clearAuthCookies(response);
         }
 
         filterChain.doFilter(request, response);
@@ -91,17 +101,17 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
      * Tenta renovar o access token usando o refresh token.
      * Retorna true se conseguiu renovar com sucesso.
      */
-    private boolean tryAutoRefresh(String refreshToken, HttpServletResponse response) {
+    private boolean tryAutoRefresh(String refreshToken, HttpServletRequest request, HttpServletResponse response) {
         try {
             AuthResponse authResponse = refreshAccessTokenUseCase.execute(refreshToken);
 
-            // Adicionar novos tokens nos cookies
             setAuthCookies(response, authResponse);
 
-            return true;
+            request.setAttribute("REFRESHED_ACCESS_TOKEN", authResponse.token());
 
+            return true;
         } catch (Exception e) {
-            log.warn("Erro ao renovar token automaticamente: {}", e.getMessage());
+            log.error("Erro ao renovar token automaticamente", e);
             return false;
         }
     }
@@ -134,15 +144,18 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
     }
 
     private void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(maxAge)
-                .sameSite(cookieSameSite)
-                .domain(cookieDomain)
-                .build();
+                .sameSite(cookieSameSite);
 
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            builder.domain(cookieDomain);
+        }
+
+        ResponseCookie cookie = builder.build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 

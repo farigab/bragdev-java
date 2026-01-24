@@ -37,7 +37,7 @@ gemini:
 
 logging:
   level:
-    bragdoc: INFO
+    bragdoc: DEBUG
     org.hibernate.SQL: DEBUG
 
 github:

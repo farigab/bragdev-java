@@ -202,28 +202,34 @@ public class AuthController {
     }
 
     private void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(maxAge)
-                .sameSite(cookieSameSite)
-                .domain(cookieDomain)
-                .build();
+                .sameSite(cookieSameSite);
 
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            builder.domain(cookieDomain);
+        }
+
+        ResponseCookie cookie = builder.build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private void clearCookie(HttpServletResponse response, String name) {
-        ResponseCookie cookie = ResponseCookie.from(name, "")
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
-                .sameSite(cookieSameSite)
-                .domain(cookieDomain)
-                .build();
+                .sameSite(cookieSameSite);
 
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            builder.domain(cookieDomain);
+        }
+
+        ResponseCookie cookie = builder.build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -23,6 +25,7 @@ import java.util.Collections;
  * - Configurar contexto de segurança do Spring
  */
 @Component
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
@@ -37,10 +40,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        String token = extractTokenFromCookie(request);
+        String uri = request.getRequestURI();
+        log.trace("JwtAuthenticationFilter - URI: {}", uri);
+
+        String token = (String) request.getAttribute("REFRESHED_ACCESS_TOKEN");
+
+        if (token != null) {
+            log.debug("Usando token renovado pelo filtro anterior");
+        } else {
+            token = extractTokenFromCookie(request);
+            log.debug("Token extraído do cookie: {}", token != null ? "presente" : "ausente");
+        }
 
         if (token != null && jwtTokenService.isValid(token)) {
+            log.debug("Token válido, autenticando usuário");
             authenticateUser(token, request);
+        } else {
+            log.debug("Token inválido ou ausente - usuário NÃO autenticado");
         }
 
         filterChain.doFilter(request, response);
