@@ -68,8 +68,7 @@ public class GenerateAIReportUseCase {
      * Variante customizada que permite passar um prompt do usuário e um repositório
      * que serão considerados na geração do prompt para a IA.
      */
-    public AIReportResponse executeCustom(GenerateReportRequest request, String userLogin, String userPrompt,
-            java.util.List<String> repositories) {
+    public AIReportResponse executeCustom(GenerateReportRequest request, String userLogin, String userPrompt, List<String> repositories) {
         ReportType reportType = ReportType.from(request.reportType());
 
         ReportFilter filter = buildFilter(request);
