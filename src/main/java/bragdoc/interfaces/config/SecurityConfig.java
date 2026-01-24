@@ -8,29 +8,25 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import bragdoc.infrastructure.security.AutoRefreshTokenFilter;
 import bragdoc.infrastructure.security.JwtAuthenticationFilter;
-import bragdoc.infrastructure.security.TokenRefreshFilter;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final TokenRefreshFilter tokenRefreshFilter;
+    private final AutoRefreshTokenFilter autoRefreshTokenFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(
-            TokenRefreshFilter tokenRefreshFilter,
+            AutoRefreshTokenFilter autoRefreshTokenFilter,
             JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.tokenRefreshFilter = tokenRefreshFilter;
+        this.autoRefreshTokenFilter = autoRefreshTokenFilter;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        http.csrf(csrf -> csrf.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
@@ -39,8 +35,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
                         .anyRequest().authenticated())
-                .addFilterBefore(tokenRefreshFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtAuthenticationFilter, TokenRefreshFilter.class);
+                .addFilterBefore(autoRefreshTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter, AutoRefreshTokenFilter.class);
 
         return http.build();
     }

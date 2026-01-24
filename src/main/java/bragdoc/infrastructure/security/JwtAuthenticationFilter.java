@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -15,14 +14,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+/**
+ * Filtro de autenticação JWT.
+ *
+ * Responsabilidades:
+ * - Extrair JWT do cookie
+ * - Validar JWT
+ * - Configurar contexto de segurança do Spring
+ */
 @Component
-@Order(2)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final JwtTokenService jwtTokenService;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(JwtTokenService jwtTokenService) {
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
@@ -31,30 +37,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        // Verifica se foi renovado pelo filtro anterior
-        String token = (String) request.getAttribute("renewed_access_token");
+        String token = extractTokenFromCookie(request);
 
-        // Se não foi renovado, pega do cookie
-        if (token == null) {
-            token = extractTokenFromCookie(request);
-        }
-
-        if (token != null && jwtService.isValid(token)) {
-            try {
-                String userLogin = jwtService.extractUserLogin(token);
-
-                if (userLogin != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userLogin,
-                            null,
-                            Collections.emptyList());
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
-            } catch (Exception e) {
-                // Token inválido, continua sem autenticação
-            }
+        if (token != null && jwtTokenService.isValid(token)) {
+            authenticateUser(token, request);
         }
 
         filterChain.doFilter(request, response);
@@ -71,5 +57,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return null;
+    }
+
+    private void authenticateUser(String token, HttpServletRequest request) {
+        try {
+            String userLogin = jwtTokenService.extractUserLogin(token);
+
+            if (userLogin != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userLogin,
+                        null,
+                        Collections.emptyList());
+
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+
+        }
     }
 }

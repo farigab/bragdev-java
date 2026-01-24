@@ -24,7 +24,6 @@ import bragdoc.application.user.ClearGitHubTokenUseCase;
 import bragdoc.application.user.GetCurrentUserUseCase;
 import bragdoc.application.user.RefreshAccessTokenUseCase;
 import bragdoc.application.user.RevokeAllRefreshTokensUseCase;
-import bragdoc.application.user.RevokeRefreshTokenUseCase;
 import bragdoc.application.user.SaveGitHubTokenUseCase;
 import bragdoc.domain.achievement.AchievementRepository;
 import bragdoc.domain.github.GitHubClient;
@@ -36,7 +35,11 @@ import bragdoc.domain.user.UserRepository;
 
 /**
  * Configuração de beans da aplicação.
- * Aqui é onde fazemos a injeção de dependências e composição dos Use Cases.
+ *
+ * Responsabilidades:
+ * - Injeção de dependências
+ * - Composição dos Use Cases
+ * - Configuração de bibliotecas externas
  */
 @Configuration
 public class BeanConfiguration {
@@ -94,12 +97,6 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public RevokeRefreshTokenUseCase revokeRefreshTokenUseCase(
-            RefreshTokenRepository refreshTokenRepository) {
-        return new RevokeRefreshTokenUseCase(refreshTokenRepository);
-    }
-
-    @Bean
     public RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase(
             RefreshTokenRepository refreshTokenRepository) {
         return new RevokeAllRefreshTokensUseCase(refreshTokenRepository);
@@ -149,14 +146,20 @@ public class BeanConfiguration {
             AIReportGenerator aiReportGenerator,
             UserRepository userRepository,
             GitHubClient gitHubClient) {
-        return new GenerateAIReportUseCase(achievementRepository, aiReportGenerator, userRepository, gitHubClient);
+        return new GenerateAIReportUseCase(
+                achievementRepository,
+                aiReportGenerator,
+                userRepository,
+                gitHubClient);
     }
 
     @Bean
     public GenerateGitHubAnalysisUseCase generateGitHubAnalysisUseCase(
             AchievementRepository achievementRepository,
             AIReportGenerator aiReportGenerator) {
-        return new GenerateGitHubAnalysisUseCase(achievementRepository, aiReportGenerator);
+        return new GenerateGitHubAnalysisUseCase(
+                achievementRepository,
+                aiReportGenerator);
     }
 
     // ============= GITHUB USE CASES =============
@@ -173,8 +176,13 @@ public class BeanConfiguration {
             UserRepository userRepository,
             AchievementRepository achievementRepository,
             GitHubClient gitHubClient) {
-        return new ImportGitHubDataUseCase(userRepository, achievementRepository, gitHubClient);
+        return new ImportGitHubDataUseCase(
+                userRepository,
+                achievementRepository,
+                gitHubClient);
     }
+
+    // ============= EXTERNAL LIBRARIES =============
 
     @Bean
     public RestTemplate restTemplate() {

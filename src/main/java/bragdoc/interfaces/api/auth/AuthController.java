@@ -21,9 +21,8 @@ import bragdoc.application.user.AuthenticateUserUseCase;
 import bragdoc.application.user.ClearGitHubTokenUseCase;
 import bragdoc.application.user.RefreshAccessTokenUseCase;
 import bragdoc.application.user.RevokeAllRefreshTokensUseCase;
-import bragdoc.application.user.RevokeRefreshTokenUseCase;
 import bragdoc.application.user.SaveGitHubTokenUseCase;
-import bragdoc.application.user.dto.RefreshTokenRequest;
+import bragdoc.application.user.dto.AuthResponse;
 import bragdoc.application.user.dto.SaveGitHubTokenRequest;
 import bragdoc.interfaces.api.common.CurrentUser;
 import bragdoc.interfaces.api.user.dto.SaveGitHubTokenApiRequest;
@@ -40,7 +39,6 @@ public class AuthController {
 
     private final AuthenticateUserUseCase authenticateUserUseCase;
     private final RefreshAccessTokenUseCase refreshAccessTokenUseCase;
-    private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
     private final RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase;
     private final SaveGitHubTokenUseCase saveGitHubTokenUseCase;
     private final ClearGitHubTokenUseCase clearGitHubTokenUseCase;
@@ -66,18 +64,19 @@ public class AuthController {
     public AuthController(
             AuthenticateUserUseCase authenticateUserUseCase,
             RefreshAccessTokenUseCase refreshAccessTokenUseCase,
-            RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
             RevokeAllRefreshTokensUseCase revokeAllRefreshTokensUseCase,
             SaveGitHubTokenUseCase saveGitHubTokenUseCase,
             ClearGitHubTokenUseCase clearGitHubTokenUseCase) {
         this.authenticateUserUseCase = authenticateUserUseCase;
         this.refreshAccessTokenUseCase = refreshAccessTokenUseCase;
-        this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
         this.revokeAllRefreshTokensUseCase = revokeAllRefreshTokensUseCase;
         this.saveGitHubTokenUseCase = saveGitHubTokenUseCase;
         this.clearGitHubTokenUseCase = clearGitHubTokenUseCase;
     }
 
+    /**
+     * Inicia o fluxo OAuth do GitHub.
+     */
     @GetMapping("/github")
     public ResponseEntity<Void> redirectToGitHub() {
         String state = UUID.randomUUID().toString();
@@ -96,18 +95,20 @@ public class AuthController {
                 .build();
     }
 
+    /**
+     * Callback do GitHub OAuth.
+     * Troca o código por tokens e cria cookies de autenticação.
+     */
     @GetMapping("/callback")
     public void callback(
             @RequestParam String code,
             HttpServletResponse response) {
         try {
-            var authResponse = authenticateUserUseCase.execute(code, redirectUri);
+            AuthResponse authResponse = authenticateUserUseCase.execute(code, redirectUri);
 
-            // Criar cookies com configuração consistente
-            addCookieToResponse(response, "token", authResponse.token(), 3600);
-            addCookieToResponse(response, "refreshToken", authResponse.refreshToken(), 7 * 24 * 60 * 60);
+            setAuthenticationCookies(response, authResponse);
 
-            log.info("Usuário autenticado com sucesso: {}", authResponse.user().login());
+            log.info("Usuário autenticado: {}", authResponse.user().login());
             response.sendRedirect(frontendRedirectUri);
 
         } catch (Exception e) {
@@ -120,45 +121,51 @@ public class AuthController {
         }
     }
 
+    /**
+     * Renova o access token usando o refresh token.
+     */
     @PostMapping("/refresh")
     public ResponseEntity<Void> refreshToken(
-            @CookieValue("refreshToken") String refreshToken,
+            @CookieValue(value = "refreshToken", required = false) String refreshToken,
             HttpServletResponse response) {
 
-        var authResponse = refreshAccessTokenUseCase.execute(refreshToken);
+        if (refreshToken == null || refreshToken.isBlank()) {
+            clearAuthenticationCookies(response);
+            return ResponseEntity.status(401).build();
+        }
 
-        // Criar cookies com configuração consistente
-        addCookieToResponse(response, "token", authResponse.token(), 3600);
-        addCookieToResponse(response, "refreshToken", authResponse.refreshToken(), 7 * 24 * 60 * 60);
+        try {
+            AuthResponse authResponse = refreshAccessTokenUseCase.execute(refreshToken);
+            setAuthenticationCookies(response, authResponse);
 
-        log.info("Token renovado com sucesso");
-        return ResponseEntity.ok().build();
+            log.info("Token renovado com sucesso");
+            return ResponseEntity.ok().build();
+
+        } catch (Exception e) {
+            log.warn("Falha ao renovar token: {}", e.getMessage());
+            clearAuthenticationCookies(response);
+            return ResponseEntity.status(401).build();
+        }
     }
 
+    /**
+     * Logout - revoga todos os refresh tokens e limpa cookies.
+     */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CurrentUser String userLogin,
             HttpServletResponse response) {
 
         revokeAllRefreshTokensUseCase.execute(userLogin);
-
-        // Limpar cookies
-        clearCookie(response, "token");
-        clearCookie(response, "refreshToken");
+        clearAuthenticationCookies(response);
 
         log.info("Logout realizado: {}", userLogin);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/revoke-token")
-    public ResponseEntity<Void> revokeToken(
-            @Valid @RequestBody RefreshTokenRequest request,
-            @CurrentUser String userLogin) {
-
-        revokeRefreshTokenUseCase.execute(request.refreshToken(), userLogin);
-        return ResponseEntity.ok().build();
-    }
-
+    /**
+     * Salva token do GitHub para importações.
+     */
     @PostMapping("/github/token")
     public ResponseEntity<Void> saveGitHubToken(
             @Valid @RequestBody SaveGitHubTokenApiRequest apiRequest,
@@ -170,19 +177,32 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Remove token do GitHub.
+     */
     @DeleteMapping("/github/token")
     public ResponseEntity<Void> clearGitHubToken(@CurrentUser String userLogin) {
         clearGitHubTokenUseCase.execute(userLogin);
         return ResponseEntity.ok().build();
     }
 
-    // ============= MÉTODOS AUXILIARES =============
+    // ============= MÉTODOS AUXILIARES PARA COOKIES =============
 
-    /**
-     * Adiciona cookie com configuração consistente
-     */
-    private void addCookieToResponse(HttpServletResponse response, String name, String value, int maxAge) {
-        var cookie = ResponseCookie.from(name, value)
+    private void setAuthenticationCookies(HttpServletResponse response, AuthResponse authResponse) {
+        // Access token - curta duração (15 minutos)
+        addCookie(response, "token", authResponse.token(), 15 * 60);
+
+        // Refresh token - longa duração (7 dias)
+        addCookie(response, "refreshToken", authResponse.refreshToken(), 7 * 24 * 60 * 60);
+    }
+
+    private void clearAuthenticationCookies(HttpServletResponse response) {
+        clearCookie(response, "token");
+        clearCookie(response, "refreshToken");
+    }
+
+    private void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
+        ResponseCookie cookie = ResponseCookie.from(name, value)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
@@ -194,11 +214,8 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    /**
-     * Limpa cookie específico
-     */
     private void clearCookie(HttpServletResponse response, String name) {
-        var cookie = ResponseCookie.from(name, "")
+        ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
