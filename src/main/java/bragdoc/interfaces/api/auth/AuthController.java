@@ -30,10 +30,9 @@ import bragdoc.interfaces.api.user.dto.SaveGitHubTokenApiRequest;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * Controller para autenticação e OAuth.
- */
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticação", description = "Operações de autenticação e OAuth")
@@ -55,15 +54,14 @@ public class AuthController {
     @Value("${github.oauth.frontend-redirect-uri}")
     private String frontendRedirectUri;
 
-    @Value("${app.cookie.domain}")
+    @Value("${app.cookie.domain:localhost}")
     private String cookieDomain;
 
-    @Value("${app.cookie.secure}")
+    @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
 
-    @Value("${app.cookie.same-site}")
+    @Value("${app.cookie.same-site:Lax}")
     private String cookieSameSite;
-
 
     public AuthController(
             AuthenticateUserUseCase authenticateUserUseCase,
@@ -105,31 +103,15 @@ public class AuthController {
         try {
             var authResponse = authenticateUserUseCase.execute(code, redirectUri);
 
-            // Criar cookie para access token
-            var tokenCookie = ResponseCookie.from("token", authResponse.token())
-                    .httpOnly(true)
-                    .maxAge(3600) // 1 hora
-                    .path("/")
-                    .sameSite(cookieSameSite)
-                    .secure(cookieSecure)
-                    .domain(cookieDomain)
-                    .build();
+            // Criar cookies com configuração consistente
+            addCookieToResponse(response, "token", authResponse.token(), 3600);
+            addCookieToResponse(response, "refreshToken", authResponse.refreshToken(), 7 * 24 * 60 * 60);
 
-            // Criar cookie para refresh token
-            var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(7 * 24 * 60 * 60) // 7 dias
-                    .sameSite(cookieSameSite)
-                    .secure(cookieSecure)
-                    .domain(cookieDomain)
-                    .build();
-
-            response.addHeader("Set-Cookie", tokenCookie.toString());
-            response.addHeader("Set-Cookie", refreshCookie.toString());
+            log.info("Usuário autenticado com sucesso: {}", authResponse.user().login());
             response.sendRedirect(frontendRedirectUri);
 
         } catch (Exception e) {
+            log.error("Erro ao autenticar usuário: {}", e.getMessage());
             try {
                 response.sendRedirect(frontendRedirectUri + "/login?error=auth_failed");
             } catch (Exception ex) {
@@ -145,29 +127,11 @@ public class AuthController {
 
         var authResponse = refreshAccessTokenUseCase.execute(refreshToken);
 
-        // Criar cookie para novo access token
-        var tokenCookie = ResponseCookie.from("token", authResponse.token())
-                .httpOnly(true)
-                .path("/")
-                .maxAge(3600)
-                .sameSite(cookieSameSite)
-                .secure(cookieSecure)
-                .domain(cookieDomain)
-                .build();
+        // Criar cookies com configuração consistente
+        addCookieToResponse(response, "token", authResponse.token(), 3600);
+        addCookieToResponse(response, "refreshToken", authResponse.refreshToken(), 7 * 24 * 60 * 60);
 
-        // Criar cookie para novo refresh token
-        var refreshCookie = ResponseCookie.from("refreshToken", authResponse.refreshToken())
-                .httpOnly(true)
-                .maxAge(7 * 24 * 60 * 60)
-                .path("/")
-                .sameSite(cookieSameSite)
-                .secure(cookieSecure)
-                .domain(cookieDomain)
-                .build();
-
-        response.addHeader("Set-Cookie", tokenCookie.toString());
-        response.addHeader("Set-Cookie", refreshCookie.toString());
-
+        log.info("Token renovado com sucesso");
         return ResponseEntity.ok().build();
     }
 
@@ -176,32 +140,13 @@ public class AuthController {
             @CurrentUser String userLogin,
             HttpServletResponse response) {
 
-        // Revogar todos os refresh tokens do usuário
         revokeAllRefreshTokensUseCase.execute(userLogin);
 
         // Limpar cookies
-        var tokenCookie = ResponseCookie.from("token", "")
-                .httpOnly(true)
-                .path("/")
-                .maxAge(0)
-                .sameSite(cookieSameSite)
-                .secure(cookieSecure)
-                .domain(cookieDomain)
-                .build();
+        clearCookie(response, "token");
+        clearCookie(response, "refreshToken");
 
-        var refreshCookie = ResponseCookie.from("refreshToken", "")
-                .httpOnly(true)
-                .path("/")
-                .maxAge(0)
-                .sameSite(cookieSameSite)
-                .secure(cookieSecure)
-                .domain(cookieDomain)
-
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, tokenCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
+        log.info("Logout realizado: {}", userLogin);
         return ResponseEntity.ok().build();
     }
 
@@ -229,5 +174,39 @@ public class AuthController {
     public ResponseEntity<Void> clearGitHubToken(@CurrentUser String userLogin) {
         clearGitHubTokenUseCase.execute(userLogin);
         return ResponseEntity.ok().build();
+    }
+
+    // ============= MÉTODOS AUXILIARES =============
+
+    /**
+     * Adiciona cookie com configuração consistente
+     */
+    private void addCookieToResponse(HttpServletResponse response, String name, String value, int maxAge) {
+        var cookie = ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(maxAge)
+                .sameSite(cookieSameSite)
+                .domain(cookieDomain)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    /**
+     * Limpa cookie específico
+     */
+    private void clearCookie(HttpServletResponse response, String name) {
+        var cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .domain(cookieDomain)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

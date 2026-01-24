@@ -16,35 +16,42 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-/**
- * Serviço de infraestrutura para operações com JWT.
- * Isolado das camadas superiores.
- */
 @Service
 public class JwtService {
 
     private final SecretKey secretKey;
+    private final long accessTokenExpiration;
 
-    public JwtService(@Value("${jwt.secret}") String secret) {
+    public JwtService(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.access-token-expiration:900}") long accessTokenExpiration) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.accessTokenExpiration = accessTokenExpiration;
+    }
+
+    public String generateAccessToken(String userLogin, Map<String, Object> claims) {
+        return generateToken(userLogin, claims, accessTokenExpiration);
     }
 
     public String generateToken(String userLogin, Map<String, Object> claims) {
+        return generateToken(userLogin, claims, accessTokenExpiration);
+    }
+
+    private String generateToken(String userLogin, Map<String, Object> claims, long expirationSeconds) {
         var now = Instant.now();
-        var allClaims = Map.<String, Object>of("login", userLogin);
+        var allClaims = new java.util.HashMap<String, Object>();
+        allClaims.put("login", userLogin);
 
         if (claims != null) {
-            var merged = new java.util.HashMap<>(allClaims);
-            merged.putAll(claims);
-            allClaims = merged;
+            allClaims.putAll(claims);
         }
+
         return Jwts.builder()
                 .claims(allClaims)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(3600)))
+                .expiration(Date.from(now.plusSeconds(expirationSeconds)))
                 .signWith(secretKey, Jwts.SIG.HS256)
                 .compact();
-
     }
 
     public String extractUserLogin(String token) {
@@ -61,6 +68,26 @@ public class JwtService {
         }
     }
 
+    /**
+     * Extrai o login mesmo se o token estiver expirado
+     */
+    public String extractUserLoginSafe(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)  
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.get("login", String.class);
+        } catch (ExpiredJwtException e) {
+            // Token expirado, mas ainda podemos extrair as claims
+            return e.getClaims().get("login", String.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public boolean isValid(String token) {
         try {
             Jwts.parser()
@@ -73,4 +100,19 @@ public class JwtService {
         }
     }
 
+    public boolean isExpired(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
 }
