@@ -87,7 +87,9 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
 
         log.debug("Tentando renovar token via refresh");
 
-        if (tryAutoRefresh(refreshToken, request, response)) { // ← Adicione 'request' aqui
+        boolean refreshed = tryAutoRefresh(refreshToken, request, response);
+
+        if (refreshed) {
             log.info("Token renovado automaticamente");
         } else {
             log.warn("Falha ao renovar token. Limpando cookies");
