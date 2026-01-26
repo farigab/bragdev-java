@@ -1,4 +1,4 @@
-package bragdoc.interfaces.config;
+package bragdoc.interfaces.webconfig;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;

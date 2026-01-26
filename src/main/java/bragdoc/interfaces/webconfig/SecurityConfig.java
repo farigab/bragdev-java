@@ -1,4 +1,4 @@
-package bragdoc.interfaces.config;
+package bragdoc.interfaces.webconfig;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

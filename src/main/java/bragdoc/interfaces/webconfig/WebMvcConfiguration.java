@@ -1,4 +1,4 @@
-package bragdoc.interfaces.config;
+package bragdoc.interfaces.webconfig;
 
 import java.util.List;
 
