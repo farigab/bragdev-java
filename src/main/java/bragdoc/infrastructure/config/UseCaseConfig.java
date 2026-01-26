@@ -1,12 +1,7 @@
-package bragdoc.interfaces.config;
+package bragdoc.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
-
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import bragdoc.application.achievement.CreateAchievementUseCase;
 import bragdoc.application.achievement.DeleteAchievementUseCase;
@@ -33,18 +28,8 @@ import bragdoc.domain.user.OAuthService;
 import bragdoc.domain.user.RefreshTokenRepository;
 import bragdoc.domain.user.UserRepository;
 
-/**
- * Configuração de beans da aplicação.
- *
- * Responsabilidades:
- * - Injeção de dependências
- * - Composição dos Use Cases
- * - Configuração de bibliotecas externas
- */
 @Configuration
-public class BeanConfiguration {
-
-    // ============= ACHIEVEMENT USE CASES =============
+public class UseCaseConfig {
 
     @Bean
     public CreateAchievementUseCase createAchievementUseCase(
@@ -70,7 +55,6 @@ public class BeanConfiguration {
         return new FindAchievementUseCase(repository);
     }
 
-    // ============= USER USE CASES =============
 
     @Bean
     public AuthenticateUserUseCase authenticateUserUseCase(
@@ -120,8 +104,6 @@ public class BeanConfiguration {
         return new ClearGitHubTokenUseCase(userRepository);
     }
 
-    // ============= REPORT USE CASES =============
-
     @Bean
     public GenerateSummaryReportUseCase generateSummaryReportUseCase(
             AchievementRepository achievementRepository) {
@@ -162,8 +144,6 @@ public class BeanConfiguration {
                 aiReportGenerator);
     }
 
-    // ============= GITHUB USE CASES =============
-
     @Bean
     public ListRepositoriesUseCase listRepositoriesUseCase(
             UserRepository userRepository,
@@ -180,20 +160,5 @@ public class BeanConfiguration {
                 userRepository,
                 achievementRepository,
                 gitHubClient);
-    }
-
-    // ============= EXTERNAL LIBRARIES =============
-
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper;
     }
 }
