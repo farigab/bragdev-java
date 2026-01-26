@@ -97,8 +97,7 @@ src/main/java/bragdoc/
 │
 └── interfaces/            # Camada de Interface
     ├── api/               # Controllers REST
-    └── config/            # Configurações Spring
-```
+    └── webconfig/         # Configurações da camada Web (MVC, Security, Swagger)
 
 ## 🔧 Configuração
 
