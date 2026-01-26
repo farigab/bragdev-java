@@ -91,6 +91,8 @@ src/main/java/bragdoc/
 ├── infrastructure/        # Camada de Infraestrutura
 │   ├── persistence/       # Persistência (JPA)
 │   ├── integration/       # APIs externas
+│   ├── bootstrap/         # Inicialização técnica da infraestrutura (env, startup)
+│   ├── config/            # Configuração de beans e wiring da infraestrutura (Spring)
 │   └── security/          # Segurança (JWT)
 │
 └── interfaces/            # Camada de Interface
