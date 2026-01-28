@@ -295,7 +295,7 @@ Análise específica de contribuições open source e atividade no GitHub.
 
 - **Autenticação**: OAuth 2.0 via GitHub
 - **Autorização**: JWT com validação em cada requisição
-- **Cookies**: HttpOnly, Secure, SameSite=Strict
+- **Cookies**: HttpOnly, Secure, SameSite=Lax
 - **Validação**: Validação de entrada em todas as camadas
 - **CORS**: Configurado para origens específicas
 
