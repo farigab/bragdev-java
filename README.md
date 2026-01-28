@@ -23,23 +23,23 @@ O projeto segue os princípios de **Clean Architecture**, organizando o código 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Interface Layer                       │
-│              (Controllers, DTOs, Config)                 │
+│                    Interface Layer                      │
+│              (Controllers, DTOs, WebConfig)             │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
-│                  Application Layer                       │
-│         (Use Cases, Application Services)                │
+│                  Application Layer                      │
+│         (Use Cases, Application Services)               │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
-│                    Domain Layer                          │
-│      (Entities, Value Objects, Domain Services)          │
+│                    Domain Layer                         │
+│      (Entities, Value Objects, Domain Services)         │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
-│               Infrastructure Layer                       │
-│    (Repositories, External APIs, Persistence)            │
+│               Infrastructure Layer                      │
+│    (Repositories, External APIs, Persistence)           │
 └─────────────────────────────────────────────────────────┘
 ```
 
