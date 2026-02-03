@@ -71,28 +71,32 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
         String accessToken = extractCookie(request, "token");
         String refreshToken = extractCookie(request, "refreshToken");
 
+        log.debug("Cookies presentes - Access Token: {}, Refresh Token: {}", 
+                accessToken != null ? "SIM" : "NÃO", 
+                refreshToken != null ? "SIM" : "NÃO");
+
         if (accessToken != null && jwtTokenService.isValid(accessToken)) {
-            log.debug("Access token válido");
+            log.debug("Access token válido - continuando sem renovação");
             filterChain.doFilter(request, response);
             return;
         }
 
-        log.debug("Access token ausente ou inválido");
+        log.warn("Access token ausente ou inválido");
 
         if (refreshToken == null || refreshToken.isBlank()) {
-            log.debug("Refresh token ausente");
+            log.warn("Refresh token ausente - usuário precisa fazer login");
             filterChain.doFilter(request, response);
             return;
         }
 
-        log.debug("Tentando renovar token via refresh");
+        log.info("Refresh token presente - tentando renovação automática");
 
         boolean refreshed = tryAutoRefresh(refreshToken, request, response);
 
         if (refreshed) {
-            log.info("Token renovado automaticamente");
+            log.info("Token renovado automaticamente com sucesso");
         } else {
-            log.warn("Falha ao renovar token. Limpando cookies");
+            log.error("Falha ao renovar token - limpando cookies e retornando 401");
             clearAuthCookies(response);
         }
 
@@ -105,15 +109,19 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
      */
     private boolean tryAutoRefresh(String refreshToken, HttpServletRequest request, HttpServletResponse response) {
         try {
+            log.info("Tentando renovar access token usando refresh token");
             AuthResponse authResponse = refreshAccessTokenUseCase.execute(refreshToken);
 
             setAuthCookies(response, authResponse);
 
             request.setAttribute("REFRESHED_ACCESS_TOKEN", authResponse.token());
 
+            log.info("Token renovado com sucesso para usuário: {}", authResponse.user().login());
             return true;
         } catch (Exception e) {
-            log.error("Erro ao renovar token automaticamente", e);
+            log.error("Falha ao renovar token automaticamente: {} - {}", 
+                    e.getClass().getSimpleName(), 
+                    e.getMessage());
             return false;
         }
     }

@@ -9,6 +9,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import bragdoc.infrastructure.security.AutoRefreshTokenFilter;
+import bragdoc.infrastructure.security.JwtAccessDeniedHandler;
+import bragdoc.infrastructure.security.JwtAuthenticationEntryPoint;
 import bragdoc.infrastructure.security.JwtAuthenticationFilter;
 
 @Configuration
@@ -17,12 +19,18 @@ public class SecurityConfig {
 
     private final AutoRefreshTokenFilter autoRefreshTokenFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     public SecurityConfig(
             AutoRefreshTokenFilter autoRefreshTokenFilter,
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            JwtAccessDeniedHandler jwtAccessDeniedHandler) {
         this.autoRefreshTokenFilter = autoRefreshTokenFilter;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
     }
 
     @Bean
@@ -31,6 +39,9 @@ public class SecurityConfig {
         }).csrf(csrf -> csrf.disable())
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
