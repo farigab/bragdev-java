@@ -96,7 +96,7 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
         if (refreshed) {
             log.info("Token renovado automaticamente com sucesso");
         } else {
-            log.error("Falha ao renovar token - limpando cookies e retornando 401");
+            log.warn("Renovação falhou - limpando cookies e retornando 401");
             clearAuthCookies(response);
         }
 
@@ -118,8 +118,11 @@ public class AutoRefreshTokenFilter extends OncePerRequestFilter {
 
             log.info("Token renovado com sucesso para usuário: {}", authResponse.user().login());
             return true;
+        } catch (bragdoc.domain.shared.exceptions.UnauthorizedException e) {
+            log.warn("Renovação falhou (comportamento esperado): {}", e.getMessage());
+            return false;
         } catch (Exception e) {
-            log.error("Falha ao renovar token automaticamente: {} - {}", 
+            log.error("Erro inesperado ao renovar token: {} - {}", 
                     e.getClass().getSimpleName(), 
                     e.getMessage());
             return false;

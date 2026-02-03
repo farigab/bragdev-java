@@ -1,6 +1,9 @@
 spring:
   application:
     name: bragdoc
+  
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
     url: ${DB_URL:}
@@ -37,8 +40,8 @@ gemini:
 
 logging:
   level:
-    bragdoc: DEBUG
-    org.hibernate.SQL: DEBUG
+    bragdoc: ${LOG_LEVEL:INFO}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
 
 github:
   oauth:

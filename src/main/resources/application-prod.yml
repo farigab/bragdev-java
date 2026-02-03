@@ -1,0 +1,21 @@
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    bragdoc: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: WARN
+
+server:
+  port: 8080
+
+app:
+  cookie:
+    domain: ${APP_COOKIE_DOMAIN}
+    secure: true
+    same-site: Lax
