@@ -1,4 +1,4 @@
-# 🏆 BragDoc
+# 🏆 BragDev
 
 > Sistema de documentação de conquistas profissionais com integração GitHub e análise por IA
 
@@ -9,7 +9,7 @@
 
 ## 📋 Sobre o Projeto
 
-BragDoc é uma aplicação para documentar e gerenciar conquistas profissionais, permitindo que desenvolvedores mantenham um registro organizado de suas realizações. O sistema oferece:
+BragDev é uma aplicação para documentar e gerenciar conquistas profissionais, permitindo que desenvolvedores mantenham um registro organizado de suas realizações. O sistema oferece:
 
 - 📝 **Gestão de Conquistas**: Crie, edite e organize suas realizações profissionais
 - 🔗 **Integração GitHub**: Importe automaticamente PRs, commits e issues
@@ -164,7 +164,7 @@ CREATE DATABASE bragdoc;
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/bragdoc.git
+git clone https://github.com/seu-usuario/bragdev-java.git
 cd bragdoc
 
 # Configure as variáveis de ambiente
